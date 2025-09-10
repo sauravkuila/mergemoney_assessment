@@ -1,0 +1,135 @@
+package server
+
+import (
+	"fmt"
+	"net/http"
+	"time"
+
+	// auth "bitbucket.org/liquide-life/be-auth-go"
+
+	"github.com/gin-gonic/gin"
+
+	"github.com/sauravkuila/mergemoney_assessment/pkg/config"
+	"github.com/sauravkuila/mergemoney_assessment/pkg/logger"
+	"github.com/sauravkuila/mergemoney_assessment/pkg/service"
+	"go.uber.org/zap"
+)
+
+// starts the server router in a go routine.
+//
+//	uses a gin Engine as handler function to a native http router
+//	tracks the router instance globally
+//		srv = &http.Server{
+//			Addr:    <config ip>:<config port>,
+//		 	Handler: &gin.Emgine{},
+//		}
+func startRouter(obj service.ServiceItf) {
+	srv = &http.Server{
+		Addr:    fmt.Sprintf(":%d", config.GetConfig().GetInt("server.http-port")),
+		Handler: getRouter(obj), //getRouter set the api specs for version-1 routes
+	}
+	// run api router
+	logger.Log().Info("starting router")
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Log().Fatal("Error starting server", zap.Error(err))
+		}
+	}()
+}
+
+func getRouter(serviceObj service.ServiceItf) *gin.Engine {
+	// if beconfig.GetConfig().GetString("env") != string(constant.DEVELOPMENT) {
+	// 	gin.SetMode(gin.ReleaseMode)
+	// }
+	router := gin.New()
+
+	// router.Use(traceLogger(logger.Log()))
+	// router.Use(gin.Recovery())
+
+	// //health check
+	// router.GET("/health", serviceObj.Health)
+
+	// // /exists
+	// // /generateOTP
+	// // /verifyOTP --> 1FA
+	// // /setMPIN
+	// // /1fa/refresh
+	// // /verifyMPIN	--> 2FA
+	// // /2fa/refresh
+
+	// // all auth apis
+
+	// //sample login
+	// loginGroup := router.Group("/v1")
+	// {
+	// 	loginGroup.GET("/exists/:mobile/:countryCode", serviceObj.GetV1Object().CheckUserProfileExists)
+	// 	loginGroup.GET("/generateOTP", serviceObj.GetV1Object().GenerateOTP)
+	// 	loginGroup.POST("/verifyOTP", serviceObj.GetV1Object().VerifyOTP)
+	// 	loginGroup.POST("/resetMPIN", serviceObj.GetV1Object().ResetMPIN)
+
+	// 	oneFAGroup := loginGroup.Group("")
+	// 	{
+	// 		// oneFAGroup.Use(OneFAMiddleware())
+	// 		oneFAGroup.POST("/setMPIN", serviceObj.GetV1Object().SetMPIN)
+	// 		oneFAGroup.POST("/1fa/refresh", serviceObj.GetV1Object().Refresh1FA)
+	// 		oneFAGroup.POST("/verifyMPIN", serviceObj.GetV1Object().VerifyMPIN)
+	// 	}
+
+	// 	twoFAGroup := loginGroup.Group("")
+	// 	{
+	// 		// twoFAGroup.Use(TwoFAMiddleware())
+	// 		twoFAGroup.POST("/2fa/refresh", serviceObj.GetV1Object().Refresh2FA)
+	// 	}
+	// }
+
+	// //v1 routes
+	// v1 := router.Group("/v1")
+	// {
+	// 	user := v1.Group("/user")
+	// 	{
+	// 		user.GET("/profile", serviceObj.GetV1Object().GetUserProfile)
+	// 	}
+	// }
+
+	return router
+}
+
+func traceLogger(logger *zap.Logger) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
+		path := c.Request.URL.Path
+		query := c.Request.URL.RawQuery
+
+		uID := c.GetHeader("x-request-id")
+		if uID == "" {
+			uID = c.GetString(config.REQUESTID)
+		}
+		//generate a requestid if cintext does not have one
+		if uID == "" {
+			uID = fmt.Sprintf("%d", time.Now().UnixNano())
+		}
+		c.Set(config.REQUESTID, uID)
+
+		c.Next()
+
+		if c.FullPath() != "/health" {
+			latency := time.Since(start).Milliseconds()
+			userID := c.GetString(config.USERID)
+			uID := c.GetString(config.REQUESTID)
+			ucc := c.GetString(config.UCC)
+			logger.Info("request_response",
+				zap.String("path", path),
+				zap.String("requestID", uID),
+				zap.String("ucc", ucc),
+				zap.String("userId", userID),
+				zap.Int("status", c.Writer.Status()),
+				zap.String("method", c.Request.Method),
+				zap.String("path", path),
+				zap.String("query", query),
+				zap.String("user-agent", c.Request.UserAgent()),
+				zap.String("errors", c.Errors.ByType(gin.ErrorTypePrivate).String()),
+				zap.Int64("latency", latency),
+			)
+		}
+	}
+}

@@ -47,7 +47,7 @@ func (obj *accountSt) GetUserAccountsByUserId(ctx context.Context, userId string
 	return response, nil
 }
 
-func (obj *accountSt) SaveUserAccounts(ctx context.Context, userId string, accounts []dto.UserAccount) error {
+func (obj *accountSt) SaveUserAccounts(ctx context.Context, userId string, accounts []dto.UserAccount) ([]dto.DBUserAccount, error) {
 	query := `
 		INSERT INTO user_accounts (
 			user_id, type, bank_name, account_number, 
@@ -63,5 +63,25 @@ func (obj *accountSt) SaveUserAccounts(ctx context.Context, userId string, accou
 		values = append(values, userId, account.Type, account.BankName, account.AccountNumber, account.Ifsc, account.LinkedVia, account.WalletName, account.WalletID, account.UpiID)
 	}
 	query += strings.Join(valueQuery, ", ")
-	return obj.psql.WithContext(ctx).Exec(query, values...).Error
+	query += ` RETURNING serial_id, user_id, type, bank_name, account_number, ifsc, linked_via, wallet_name, wallet_id, upi_id, created_at, updated_at;`
+
+	// execute the query
+	rows, err := obj.psql.WithContext(ctx).Raw(query, values...).Rows()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var (
+		response []dto.DBUserAccount = make([]dto.DBUserAccount, 0)
+	)
+	for rows.Next() {
+		var account dto.DBUserAccount
+		if err := rows.Scan(&account.Sid, &account.UserId, &account.Type, &account.BankName, &account.AccountNumber, &account.Ifsc, &account.LinkedVia, &account.WalletName, &account.WalletID, &account.UpiID, &account.CreatedAt, &account.UpdatedAt); err != nil {
+			return nil, err
+		}
+		response = append(response, account)
+	}
+
+	return response, nil
 }

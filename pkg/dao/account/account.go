@@ -12,7 +12,7 @@ type DbAccountItf interface {
 	GetUserAccountsByUserId(ctx context.Context, userId string) ([]dto.DBUserAccount, error)
 
 	// save user account
-	SaveUserAccounts(ctx context.Context, userId string, account []dto.UserAccount) error
+	SaveUserAccounts(ctx context.Context, userId string, account []dto.UserAccount) ([]dto.DBUserAccount, error)
 }
 
 type accountSt struct {

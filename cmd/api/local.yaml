@@ -9,7 +9,7 @@ log:
   level: -1 
 databases:
   postgres:
-    host: db
+    host: localhost
     password: postgres
     db: mergemoney
     sslmode: disable
@@ -19,7 +19,7 @@ databases:
 auth:
   key : secret
   key2fa: secret2fa
-  key1fa_token_timeout: 300
+  key1fa_token_timeout: 3000
   key1fa_refresh_timeout: 604800
   key2fa_token_timeout: 300
   key2fa_refresh_timeout: 86400

@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/sauravkuila/mergemoney_assessment/external"
 	"github.com/sauravkuila/mergemoney_assessment/pkg/config"
 	"github.com/sauravkuila/mergemoney_assessment/pkg/dao"
 	"github.com/sauravkuila/mergemoney_assessment/pkg/database"
@@ -61,6 +62,9 @@ func Start() error {
 		return err
 	}
 	databases = append(databases, postgresConn)
+
+	//init external clients
+	external.InitExternal()
 
 	// //init repo, factory, service and controller interfaces
 	repo := dao.GetRepositoryItf(postgresConn)

@@ -6,16 +6,10 @@ import (
 	"log"
 
 	"github.com/sauravkuila/mergemoney_assessment/pkg/dto"
-	"github.com/sauravkuila/mergemoney_assessment/pkg/logger"
-	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
 func (obj *userSt) GetUserFromMobile(ctx context.Context, mobile string, countryCode string) (*dto.DBUserRef, error) {
-	logger.Log(ctx).Debug("GetUserFromMobile called",
-		zap.String("mobile", mobile),
-		zap.String("countryCode", countryCode),
-	)
 	query := `
 		select 
 			user_id, user_name, mobile, country_code, user_role, user_mpin 

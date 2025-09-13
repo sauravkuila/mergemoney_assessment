@@ -61,6 +61,7 @@ func OneFAMiddleware() gin.HandlerFunc {
 		c.Set(config.AUTHORIZATION, accessTokenString)
 		c.Set("claims", claims)
 		c.Set(config.USERID, claims["user_id"])
+		c.Set(config.MOBILE, claims["mobile"])
 		c.Next()
 	}
 }
@@ -115,6 +116,7 @@ func TwoFAMiddleware() gin.HandlerFunc {
 		c.Set(config.AUTHORIZATION, accessTokenString)
 		c.Set("claims", claims)
 		c.Set(config.USERID, claims["user_id"])
+		c.Set(config.MOBILE, claims["mobile"])
 		c.Next()
 	}
 }

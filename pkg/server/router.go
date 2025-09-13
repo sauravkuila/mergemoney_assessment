@@ -63,6 +63,7 @@ func getRouter(serviceObj service.ServiceItf) *gin.Engine {
 			oneFAGroup.POST("/setMPIN", serviceObj.GetV1Object().SetMPIN)
 			oneFAGroup.POST("/1fa/refresh", serviceObj.GetV1Object().Refresh1FA)
 			oneFAGroup.POST("/verifyMPIN", serviceObj.GetV1Object().VerifyMPIN)
+			oneFAGroup.GET("/accounts", serviceObj.GetV1Object().GetAccounts) // get accounts against mobile number
 		}
 
 		twoFAGroup := loginGroup.Group("")

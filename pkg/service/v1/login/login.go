@@ -17,7 +17,6 @@ type LoginItf interface {
 
 type loginSt struct {
 	DB dao.RepositoryItf
-	// utils beutils.UtilsItf
 }
 
 func GetLoginItf(dao dao.RepositoryItf) LoginItf {

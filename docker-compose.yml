@@ -1,0 +1,31 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: mergemoney
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./pkg/database/create.sql:/docker-entrypoint-initdb.d/00-create.sql:ro
+      - ./pkg/database/seed.sql:/docker-entrypoint-initdb.d/01-seed.sql:ro
+    ports:
+      - "5432:5432"
+
+  app:
+    build: .
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=mergemoney
+      - SERVER_HTTP_PORT=8080
+    ports:
+      - "8080:8080"
+
+volumes:
+  db-data:

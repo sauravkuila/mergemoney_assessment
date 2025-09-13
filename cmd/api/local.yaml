@@ -9,7 +9,7 @@ log:
   level: -1 
 databases:
   postgres:
-    host: 127.0.0.1
+    host: db
     password: postgres
     db: mergemoney
     sslmode: disable

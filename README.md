@@ -81,13 +81,11 @@ Notes on security rules (intended behavior):
 - **Security**: Encryption for sensitive data, fraud detection, and compliance mechanisms.
 
 ## Project Structure
-
 ```
 mergemoney_assessment/
 ├── cmd/
 │   └── api/                # API entrypoint and local config (cmd/api/main.go, local.yaml)
 ├── external/               # External integrations & aggregator
-│   ├── external.go
 │   └── accountaggregator/  # Connector to external account aggregator
 ├── pkg/                    # Primary application code
 │   ├── config/             # Configuration management
@@ -122,19 +120,21 @@ Mermaid flow (rendered on platforms that support Mermaid):
 
 ```mermaid
 flowchart LR
-	A["User"] --> B["Login: mobile + OTP"]
-	B --> C["1FA granted"]
-	C --> D["List accounts / Get user detail - SFA"]
-	D --> E["User selects source account"]
-	E --> F["Initiate transaction request"]
-	F --> G["Require 2FA / MFA"]
-	G --> H["Transaction confirmed / executed"]
+  A["User"] --> B["Login: mobile + OTP"]
+  B --> C["1FA granted"]
+  C --> D["List accounts / Get user detail (SFA)"]
+  D --> E["User selects source account"]
+  E --> F["Initiate transaction request"]
+  F --> G["Require 2FA / MFA"]
+  G --> H["Transaction confirmed / executed"]
 ```
 
 Notes:
 - The account listing and user detail steps are intentionally available with SFA to reduce friction during account selection.
 - Any action that mutates account state (transfer initiation, account modification, payouts, etc.) must be protected by MFA (2FA). Ensure `middleware.TwoFAMiddleware()` is applied to those routes.
 - If your API documentation or client apps render Mermaid diagrams, the above block will produce a visual flow. The ASCII flow provides a plain text alternative for environments that don't render Mermaid.
+
+
 
 ## High-Level Design
 
@@ -155,12 +155,45 @@ Notes:
 - MFA and fraud detection mechanisms are implemented.
 - Audit logs for compliance and traceability.
 
-## Bonus Features
+## Run with Docker
 
-- Multiple payment provider support with failover.
-- Reconciliation logic for transaction consistency.
+The repository includes a `Dockerfile` and `docker-compose.yml` to run the service together with a Postgres instance pre-initialized with the schema and seed data.
 
-## References
+What the compose setup does:
+- Starts a Postgres 15 container with database `mergemoney` and user `postgres`/`postgres`.
+- Initializes the database using `pkg/database/create.sql` (schema) and `pkg/database/seed.sql` (seed data).
+- Builds the Go service image from the repository and runs the server.
 
-- [Sample Architecture Diagram](https://d2908q01vomqb2.cloudfront.net/fc074d501302eb2b93e2554793fcaf50b3bf7291/2023/02/13/adverse_1.png)
-- [Sample Data Model](https://media.geeksforgeeks.org/wp-content/uploads/20231215171020/Data-model-design-2.jpg)
+Quick start
+
+1. Build and start everything:
+
+```bash
+docker compose up --build
+```
+
+2. After startup:
+- Postgres will be available on localhost:5432 (user: postgres / password: postgres, db: mergemoney).
+- The Go service will be available on localhost:8080.
+
+3. Verify seed data (example using psql):
+
+```bash
+docker exec -it $(docker ps -qf "ancestor=postgres:15") psql -U postgres -d mergemoney -c "select user_id, user_name, mobile from user_ref;"
+```
+
+4. Verify server is up (health):
+
+```bash
+curl -v http://localhost:8080/health
+```
+
+Notes:
+- If you change the schema in `pkg/database/create.sql`, the initialization will only run for a fresh volume. To re-run the scripts, remove the `db-data` volume:
+
+```bash
+docker compose down -v
+docker builder prune -af
+```
+
+- The containerized app uses a small wait-for-db wrapper so the server starts only after Postgres is reachable. The app accepts DB env vars `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` which are set in `docker-compose.yml`.

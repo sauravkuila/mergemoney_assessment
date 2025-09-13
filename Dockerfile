@@ -1,4 +1,4 @@
-FROM golang:1.20-alpine AS builder
+FROM golang:1.24.7-alpine AS builder
 WORKDIR /src
 
 RUN apk add --no-cache git
@@ -8,7 +8,7 @@ RUN go mod download
 
 COPY . .
 
--- Build the server binary (main is in cmd/api) and place it in /src/cmd/api
+# Build the server binary (main is in cmd/api) and place it in /src/cmd/api
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o ./cmd/api/server ./cmd/api
 
 FROM alpine:3.18

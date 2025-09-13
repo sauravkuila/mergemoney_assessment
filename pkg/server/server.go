@@ -3,24 +3,24 @@ package server
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/sauravkuila/mergemoney_assessment/pkg/config"
 	"github.com/sauravkuila/mergemoney_assessment/pkg/dao"
 	"github.com/sauravkuila/mergemoney_assessment/pkg/database"
 	"github.com/sauravkuila/mergemoney_assessment/pkg/logger"
 	"github.com/sauravkuila/mergemoney_assessment/pkg/service"
-	"go.mongodb.org/mongo-driver/mongo"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
 var (
-	srv            *http.Server
-	ctx            context.Context
-	databases      []*gorm.DB
-	mongoDatabases []*mongo.Client
+	srv       *http.Server
+	ctx       context.Context
+	databases []*gorm.DB
 )
 
 // starts the server with initializations
@@ -62,25 +62,6 @@ func Start() error {
 	}
 	databases = append(databases, postgresConn)
 
-	// //connect to mongo db
-	// mongoCfg := database.DbConfig{
-	// 	Host:           config.GetConfig().GetString("databases.mongo.host"),
-	// 	Port:           config.GetConfig().GetInt("databases.mongo.port"),
-	// 	User:           config.GetConfig().GetString("databases.mongo.user"),
-	// 	Password:       config.GetConfig().GetString("databases.mongo.password"),
-	// 	Database:       config.GetConfig().GetString("databases.mongo.db"),
-	// 	ConnectTimeout: config.GetConfig().GetInt("databases.mongo.connect_timeout"),
-	// 	MongoConfig: database.MongoConfig{
-	// 		ValidatePing: config.GetConfig().GetBool("databases.mongo.ping"),
-	// 	},
-	// }
-	// mClient, err := database.ConnectMongo(mongoCfg)
-	// if err != nil {
-	// 	logger.Log().Error("Failed to connect mongo database", zap.Error(err))
-	// 	return err
-	// }
-	// mongoDatabases = append(mongoDatabases, mClient)
-
 	// //init repo, factory, service and controller interfaces
 	repo := dao.GetRepositoryItf(postgresConn)
 	service := service.GetServiceItf(repo)
@@ -93,16 +74,16 @@ func Start() error {
 
 // stops the router running in the go routine.
 func ShutdownRouter() {
-	// timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
-	// defer cancel()
-	// logger.Log().Info("Shutting down router START")
-	// defer logger.Log().Info("Shutting down router END")
-	// if err := srv.Shutdown(timeoutCtx); err != nil {
-	// 	logger.Log().Fatal("Server forced to shutdown", zap.Error(err))
-	// }
-	// // catching ctx.Done(). timeout of 2 seconds.
-	// <-timeoutCtx.Done()
-	// log.Println("timeout of 2 seconds.")
+	timeoutCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	logger.Log().Info("Shutting down router START")
+	defer logger.Log().Info("Shutting down router END")
+	if err := srv.Shutdown(timeoutCtx); err != nil {
+		logger.Log().Fatal("Server forced to shutdown", zap.Error(err))
+	}
+	// catching ctx.Done(). timeout of 2 seconds.
+	<-timeoutCtx.Done()
+	log.Println("timeout of 2 seconds.")
 }
 
 // closes all database connections
@@ -111,21 +92,17 @@ func ShutdownRouter() {
 //	logs error if unable to close
 //		function used: *sql.DB.Close()
 func CloseDatabase() {
-	// logger.Log().Info("disconnecting databases START")
-	// defer logger.Log().Info("disconnecting databases END")
-	// for _, database := range databases {
-	// 	db, _ := database.DB()
-	// 	if db != nil {
-	// 		err := db.Close()
-	// 		if err != nil {
-	// 			logger.Log().Error("unable to close db", zap.Error(err))
-	// 		}
-	// 	} else {
-	// 		logger.Log().Error("unable to close db as connection is nil")
-	// 	}
-	// }
-	// ctx := context.Background()
-	// for _, database := range mongoDatabases {
-	// 	database.Disconnect(ctx)
-	// }
+	logger.Log().Info("disconnecting databases START")
+	defer logger.Log().Info("disconnecting databases END")
+	for _, database := range databases {
+		db, _ := database.DB()
+		if db != nil {
+			err := db.Close()
+			if err != nil {
+				logger.Log().Error("unable to close db", zap.Error(err))
+			}
+		} else {
+			logger.Log().Error("unable to close db as connection is nil")
+		}
+	}
 }

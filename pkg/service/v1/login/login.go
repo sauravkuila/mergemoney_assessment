@@ -21,11 +21,7 @@ type loginSt struct {
 }
 
 func GetLoginItf(dao dao.RepositoryItf) LoginItf {
-	// cfg := beutils.UtilsConfig{
-	// 	RestSSlEnabled: false,
-	// }
 	return &loginSt{
 		DB: dao,
-		// utils: beutils.GetUtilsObj(cfg),
 	}
 }

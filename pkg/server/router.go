@@ -69,7 +69,6 @@ func getRouter(serviceObj service.ServiceItf) *gin.Engine {
 		{
 			twoFAGroup.Use(middleware.TwoFAMiddleware())
 			twoFAGroup.POST("/2fa/refresh", serviceObj.GetV1Object().Refresh2FA)
-
 		}
 	}
 
@@ -96,14 +95,12 @@ func traceLogger(logger *zap.Logger) gin.HandlerFunc {
 
 		if c.FullPath() != "/health" {
 			latency := time.Since(start).Milliseconds()
-			userID := c.GetString(config.USERID)
+			// userID := c.GetString(config.USERID)
 			uID := c.GetString(config.REQUESTID)
-			ucc := c.GetString(config.UCC)
 			logger.Info("request_response",
 				zap.String("path", path),
 				zap.String("requestID", uID),
-				zap.String("ucc", ucc),
-				zap.String("userId", userID),
+				// zap.String("userId", userID),
 				zap.Int("status", c.Writer.Status()),
 				zap.String("method", c.Request.Method),
 				zap.String("path", path),

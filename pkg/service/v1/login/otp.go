@@ -69,6 +69,7 @@ func (obj *loginSt) VerifyOTP(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, response)
 		return
 	}
+	logger.Log(c).Debug("OTP verified successfully", zap.String("mobile", request.Mobile), zap.String("countryCode", request.CountryCode))
 
 	//fetch user info from database. change this to the OTP req id tracking redis or db
 	userRef, err := obj.DB.GetUserFromMobile(c, request.Mobile, request.CountryCode)

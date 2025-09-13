@@ -15,6 +15,6 @@ type repositorySt struct {
 
 func GetRepositoryItf(psql *gorm.DB) RepositoryItf {
 	return &repositorySt{
-		// user.GetUserItf(psql, mnsql),
+		user.GetUserItf(psql),
 	}
 }

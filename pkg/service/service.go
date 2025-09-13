@@ -8,7 +8,7 @@ import (
 
 type ServiceItf interface {
 	Health(c *gin.Context)
-	// GetV1Object() v1.V1Group
+	GetV1Object() v1.V1Group
 }
 
 type serviceSt struct {

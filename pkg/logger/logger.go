@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	beconfig "github.com/sauravkuila/mergemoney_assessment/pkg/config"
+	config "github.com/sauravkuila/mergemoney_assessment/pkg/config"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -72,7 +72,7 @@ func InitLogger(loggerType string, level zapcore.Level) error {
 func Log(data ...context.Context) *zap.Logger {
 	if data != nil {
 		ctx := data[0]
-		return logObject.With(zap.Any(beconfig.REQUESTID, ctx.Value(beconfig.REQUESTID)), zap.Any(beconfig.USERID, ctx.Value(beconfig.USERID)), zap.Any(beconfig.UCC, ctx.Value(beconfig.UCC)))
+		return logObject.With(zap.Any(config.REQUESTID, ctx.Value(config.REQUESTID)), zap.Any(config.USERID, ctx.Value(config.USERID)), zap.Any(config.UCC, ctx.Value(config.UCC)))
 	} else {
 		return logObject
 	}

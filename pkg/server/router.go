@@ -10,7 +10,9 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/sauravkuila/mergemoney_assessment/pkg/config"
+	"github.com/sauravkuila/mergemoney_assessment/pkg/constant"
 	"github.com/sauravkuila/mergemoney_assessment/pkg/logger"
+	"github.com/sauravkuila/mergemoney_assessment/pkg/middleware"
 	"github.com/sauravkuila/mergemoney_assessment/pkg/service"
 	"go.uber.org/zap"
 )
@@ -38,58 +40,38 @@ func startRouter(obj service.ServiceItf) {
 }
 
 func getRouter(serviceObj service.ServiceItf) *gin.Engine {
-	// if beconfig.GetConfig().GetString("env") != string(constant.DEVELOPMENT) {
-	// 	gin.SetMode(gin.ReleaseMode)
-	// }
+	if config.GetConfig().GetString("env") != string(constant.DEVELOPMENT) {
+		gin.SetMode(gin.ReleaseMode)
+	}
 	router := gin.New()
 
-	// router.Use(traceLogger(logger.Log()))
-	// router.Use(gin.Recovery())
+	router.Use(traceLogger(logger.Log()))
+	router.Use(gin.Recovery())
 
-	// //health check
-	// router.GET("/health", serviceObj.Health)
+	//health check
+	router.GET("/health", serviceObj.Health)
 
-	// // /exists
-	// // /generateOTP
-	// // /verifyOTP --> 1FA
-	// // /setMPIN
-	// // /1fa/refresh
-	// // /verifyMPIN	--> 2FA
-	// // /2fa/refresh
+	loginGroup := router.Group("/v1")
+	{
+		loginGroup.GET("/generateOTP", serviceObj.GetV1Object().GenerateOTP)
+		loginGroup.POST("/verifyOTP", serviceObj.GetV1Object().VerifyOTP)
+		loginGroup.POST("/resetMPIN", serviceObj.GetV1Object().ResetMPIN)
 
-	// // all auth apis
+		oneFAGroup := loginGroup.Group("")
+		{
+			oneFAGroup.Use(middleware.OneFAMiddleware())
+			oneFAGroup.POST("/setMPIN", serviceObj.GetV1Object().SetMPIN)
+			oneFAGroup.POST("/1fa/refresh", serviceObj.GetV1Object().Refresh1FA)
+			oneFAGroup.POST("/verifyMPIN", serviceObj.GetV1Object().VerifyMPIN)
+		}
 
-	// //sample login
-	// loginGroup := router.Group("/v1")
-	// {
-	// 	loginGroup.GET("/exists/:mobile/:countryCode", serviceObj.GetV1Object().CheckUserProfileExists)
-	// 	loginGroup.GET("/generateOTP", serviceObj.GetV1Object().GenerateOTP)
-	// 	loginGroup.POST("/verifyOTP", serviceObj.GetV1Object().VerifyOTP)
-	// 	loginGroup.POST("/resetMPIN", serviceObj.GetV1Object().ResetMPIN)
+		twoFAGroup := loginGroup.Group("")
+		{
+			twoFAGroup.Use(middleware.TwoFAMiddleware())
+			twoFAGroup.POST("/2fa/refresh", serviceObj.GetV1Object().Refresh2FA)
 
-	// 	oneFAGroup := loginGroup.Group("")
-	// 	{
-	// 		// oneFAGroup.Use(OneFAMiddleware())
-	// 		oneFAGroup.POST("/setMPIN", serviceObj.GetV1Object().SetMPIN)
-	// 		oneFAGroup.POST("/1fa/refresh", serviceObj.GetV1Object().Refresh1FA)
-	// 		oneFAGroup.POST("/verifyMPIN", serviceObj.GetV1Object().VerifyMPIN)
-	// 	}
-
-	// 	twoFAGroup := loginGroup.Group("")
-	// 	{
-	// 		// twoFAGroup.Use(TwoFAMiddleware())
-	// 		twoFAGroup.POST("/2fa/refresh", serviceObj.GetV1Object().Refresh2FA)
-	// 	}
-	// }
-
-	// //v1 routes
-	// v1 := router.Group("/v1")
-	// {
-	// 	user := v1.Group("/user")
-	// 	{
-	// 		user.GET("/profile", serviceObj.GetV1Object().GetUserProfile)
-	// 	}
-	// }
+		}
+	}
 
 	return router
 }

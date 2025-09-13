@@ -1,9 +1,12 @@
 module github.com/sauravkuila/mergemoney_assessment
 
-go 1.23.11
+go 1.24.0
+
+toolchain go1.24.7
 
 require (
 	github.com/gin-gonic/gin v1.10.1
+	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/spf13/viper v1.21.0
 	go.mongodb.org/mongo-driver v1.17.4
 	go.uber.org/zap v1.27.0

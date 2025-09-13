@@ -1,22 +1,16 @@
 package user
 
 import (
+	"context"
+
+	"github.com/sauravkuila/mergemoney_assessment/pkg/dto"
 	"go.mongodb.org/mongo-driver/mongo"
 	"gorm.io/gorm"
 )
 
 type DbUserItf interface {
-	// send data to be updated in metadata tag.
-	// data is updated based on userId+brokerId combination OR based on brokerUserIdentifier.
-	// preference of brokerUserIdentifier is taken if all of them are received.
-	// UpdateUsersData(ctx context.Context, data dto.DbBrokerUserData) error
-
-	// pass either userId+brokerId OR brokerUserIdentifier.
-	// preference of brokerUserIdentifier is taken if all of them are received.
-	// GetUserData(ctx context.Context, data dto.DbBrokerUserData) (*dto.DbBrokerUserData, error)
-
-	//fetch user data from userId
-	// GetUserFromUserId(ctx context.Context, userId string) (*dto.DBUserRef, error)
+	//fetch user data from number
+	GetUserFromMobile(ctx context.Context, mobile string, countryCode string) (*dto.DBUserRef, error)
 }
 
 type userSt struct {

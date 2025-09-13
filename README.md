@@ -24,6 +24,39 @@ This project implements a robust, secure, and scalable cross-border money transf
 - Users select the source account for transfers.
 - Multi-factor authentication (MFA) is supported.
 
+### Authentication modes (SFA vs MFA)
+
+This project supports two levels of authentication:
+
+- Single-Factor Authentication (SFA / 1FA):
+	- Used for lower-risk read-only operations such as fetching user details and listing accounts for a user.
+	- In the router these endpoints are protected by the OneFAMiddleware (1FA) which represents SFA flows in this codebase.
+
+- Multi-Factor Authentication (MFA / 2FA):
+	- Required for higher-risk operations such as performing account transactions or any action that changes account state.
+	- In the router these endpoints are protected by the TwoFAMiddleware (2FA).
+
+Routing summary (from `pkg/server/router.go`)
+
+- Public / unauthenticated:
+	- GET  /health
+	- GET  /v1/generateOTP
+	- POST /v1/verifyOTP
+	- POST /v1/resetMPIN
+
+- SFA (1FA) protected endpoints (OneFAMiddleware):
+	- POST /v1/setMPIN         -> Set MPIN for a logged-in user
+	- POST /v1/1fa/refresh     -> Refresh 1FA (SFA) session
+	- POST /v1/verifyMPIN      -> Verify MPIN (SFA)
+	- GET  /v1/accounts        -> Get accounts for a mobile number (read-only)
+
+- MFA (2FA) protected endpoints (TwoFAMiddleware):
+	- POST /v1/2fa/refresh     -> Refresh 2FA (MFA) session
+
+Notes on security rules (intended behavior):
+- User detail and user account detail (the endpoints used to fetch accounts) can be fetched using SFA (1FA). This is intentionally lower friction for listing and selection flows.
+- All other account transactions (any operation that initiates transfers, modifies accounts, or performs sensitive actions) must require MFA (2FA). The current router enforces 2FA only on the 2FA refresh endpoint; when adding or changing endpoints that perform transactions, ensure `middleware.TwoFAMiddleware()` is applied to those route groups or routes.
+
 ### 2. Money Transfer Workflow
 - Users specify source/destination currency, amount, and recipient details.
 - System fetches real-time exchange rates and fees.
@@ -51,21 +84,25 @@ This project implements a robust, secure, and scalable cross-border money transf
 
 ```
 mergemoney_assessment/
-├── cmd/api/                # API entrypoint
-├── pkg/
+├── cmd/
+│   └── api/                # API entrypoint and local config (cmd/api/main.go, local.yaml)
+├── external/               # External integrations & aggregator
+│   ├── external.go
+│   └── accountaggregator/  # Connector to external account aggregator
+├── pkg/                    # Primary application code
 │   ├── config/             # Configuration management
 │   ├── constant/           # Constants and enums
 │   ├── dao/                # Data access objects
+│   │   ├── account/        # Account-related DB operations
 │   │   └── user/           # User-related DB operations
-│   ├── database/           # DB models and connections
+│   ├── database/           # DB models and Postgres connection
 │   ├── dto/                # Data transfer objects
-│   ├── logger/             # Logging utilities
-│   ├── middleware/         # Middleware (auth, validation)
-│   ├── server/             # Server/router setup
-│   ├── service/            # Business logic
-│   │   └── v1/             # Versioned services
-│   │       └── login/      # Login service
-│   └── utils/              # Utility functions
+│   ├── logger/             # Logging utilities (gorm logger, zap wrapper)
+│   ├── middleware/         # Middleware (auth, mfa, mfa handlers)
+│   ├── server/             # Server/router setup (router.go)
+│   ├── service/            # Business logic and v1 services
+│   │   └── v1/             # Versioned APIs (login, account, etc.)
+│   └── utils/              # Utility functions (identifier, redis client, rest client)
 └── README.md
 ```
 

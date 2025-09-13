@@ -122,13 +122,13 @@ Mermaid flow (rendered on platforms that support Mermaid):
 
 ```mermaid
 flowchart LR
-	A[User] --> B(Login: mobile + OTP)
-	B --> C[1FA granted]
-	C --> D[List accounts / Get user detail (SFA allowed)]
-	D --> E[User selects source account]
-	E --> F[Initiate transaction request]
-	F --> G[Require 2FA / MFA]
-	G --> H[Transaction confirmed / executed]
+	A["User"] --> B["Login: mobile + OTP"]
+	B --> C["1FA granted"]
+	C --> D["List accounts / Get user detail - SFA"]
+	D --> E["User selects source account"]
+	E --> F["Initiate transaction request"]
+	F --> G["Require 2FA / MFA"]
+	G --> H["Transaction confirmed / executed"]
 ```
 
 Notes:

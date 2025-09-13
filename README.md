@@ -106,6 +106,36 @@ mergemoney_assessment/
 └── README.md
 ```
 
+## Authentication sequence
+
+Below is a simple flow that describes the expected authentication and operation sequence in the system. It shows the minimal-login and account listing flow that uses Single-Factor Authentication (SFA / 1FA) and the higher-risk transaction flow that requires Multi-Factor Authentication (MFA / 2FA).
+
+ASCII flow:
+
+```
+User -> [Login (mobile + OTP)] -> 1FA
+1FA -> [List Accounts / Get User Detail] -> User selects account
+User -> [Initiate Transaction] -> 2FA -> Transaction executed
+```
+
+Mermaid flow (rendered on platforms that support Mermaid):
+
+```mermaid
+flowchart LR
+	A[User] --> B(Login: mobile + OTP)
+	B --> C[1FA granted]
+	C --> D[List accounts / Get user detail (SFA allowed)]
+	D --> E[User selects source account]
+	E --> F[Initiate transaction request]
+	F --> G[Require 2FA / MFA]
+	G --> H[Transaction confirmed / executed]
+```
+
+Notes:
+- The account listing and user detail steps are intentionally available with SFA to reduce friction during account selection.
+- Any action that mutates account state (transfer initiation, account modification, payouts, etc.) must be protected by MFA (2FA). Ensure `middleware.TwoFAMiddleware()` is applied to those routes.
+- If your API documentation or client apps render Mermaid diagrams, the above block will produce a visual flow. The ASCII flow provides a plain text alternative for environments that don't render Mermaid.
+
 ## High-Level Design
 
 - **APIs**: RESTful endpoints for authentication, account linking, transfer initiation, and webhook updates.

@@ -1,5 +1,6 @@
 -- Schema creation script
-ALTER DATABASE your_database SET TIME ZONE 'Asia/Kolkata';
+-- Ensure timezone is set for the target database created by docker-compose
+ALTER DATABASE mergemoney SET TIME ZONE 'Asia/Kolkata';
 
 -- Drop tables if they exist
 DROP TABLE IF EXISTS user_ref;

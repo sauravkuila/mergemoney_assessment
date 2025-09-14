@@ -16,9 +16,9 @@ const (
 )
 
 const (
-	TRANSFER_DESTINATION_WALLET      = "wallet"
-	TRANSFER_DESTINATION_UPI         = "upi"
-	TRANSFER_DESTINATION_BANK        = "bank"
-	TRANSFER_DESTINATION_CASH_PICKUP = "cash"
-	TRANSFER_DESTINATION_UNKNOWN     = "unknown"
+	TRANSFER_TYPE_WALLET      = "wallet"
+	TRANSFER_TYPE_UPI         = "upi"
+	TRANSFER_TYPE_BANK        = "bank"
+	TRANSFER_TYPE_CASH_PICKUP = "cash"
+	TRANSFER_TYPE_UNKNOWN     = "unknown"
 )

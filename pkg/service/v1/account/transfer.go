@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/sauravkuila/mergemoney_assessment/external/fxratemanager"
+	"github.com/sauravkuila/mergemoney_assessment/external/paymentprovider"
 	"github.com/sauravkuila/mergemoney_assessment/pkg/config"
 	"github.com/sauravkuila/mergemoney_assessment/pkg/constant"
 	"github.com/sauravkuila/mergemoney_assessment/pkg/dto"
@@ -40,17 +41,17 @@ func (obj *accountSt) Transfer(c *gin.Context) {
 	}
 
 	// determine destination type
-	destType := constant.TRANSFER_DESTINATION_UNKNOWN
+	destType := constant.TRANSFER_TYPE_UNKNOWN
 	if request.Destination.WalletID != "" {
-		destType = constant.TRANSFER_DESTINATION_WALLET
+		destType = constant.TRANSFER_TYPE_WALLET
 	} else if request.Destination.Upi != "" {
-		destType = constant.TRANSFER_DESTINATION_UPI
+		destType = constant.TRANSFER_TYPE_UPI
 	} else if request.Destination.Account != "" {
-		destType = constant.TRANSFER_DESTINATION_BANK
+		destType = constant.TRANSFER_TYPE_BANK
 	} else if request.Destination.RecipientDetail != nil {
 		// if recipient detail contains cash pickup info
 		if _, ok := request.Destination.RecipientDetail["pickup_location"]; ok {
-			destType = constant.TRANSFER_DESTINATION_CASH_PICKUP
+			destType = constant.TRANSFER_TYPE_CASH_PICKUP
 		}
 	} else {
 		logger.Log(c).Error("invalid destination details", zap.Any("destination", request.Destination))
@@ -89,6 +90,7 @@ func (obj *accountSt) Transfer(c *gin.Context) {
 		ConversionRate:      sql.NullFloat64{Float64: rate, Valid: true},
 		ConversionRateDate:  sql.NullTime{Time: rateDate, Valid: true},
 		OrderStatus:         sql.NullString{String: constant.ORDER_CREATED, Valid: true},
+		Remark:              sql.NullString{String: "", Valid: false},
 	}
 	orderDestination := dto.DBOrderDestination{
 		OrderID:           sql.NullString{String: id, Valid: true},
@@ -170,4 +172,153 @@ func (obj *accountSt) validateTransferRequest(c *gin.Context, transfer dto.Trans
 }
 
 func (obj *accountSt) TransferConfirm(c *gin.Context) {
+	var (
+		request  dto.TransferConfirmRequest
+		response dto.TransferConfirmResponse
+	)
+
+	if err := c.BindJSON(&request); err != nil {
+		logger.Log(c).Error("error in binding transfer confirm request", zap.Error(err))
+		response.Error = append(response.Error, err.Error())
+		response.Description = "Invalid request"
+		c.JSON(http.StatusBadRequest, response)
+		return
+	}
+	logger.Log(c).Info("transfer confirm request", zap.Any("request", request))
+
+	// fetch the order from DB and check if it belongs to user and is in pending state
+	order, orderDest, err := obj.DB.GetOrderById(c, request.TransferID, c.GetString(config.USERID))
+	if err != nil {
+		logger.Log(c).Error("error in fetching order from DB", zap.Error(err))
+		response.Error = append(response.Error, err.Error())
+		response.Description = "Invalid transfer ID"
+		c.JSON(http.StatusBadRequest, response)
+		return
+	}
+
+	// fetch source detail from DB using sid
+	userAccount, err := obj.DB.GetUserAccountsBySid(c, c.GetString(config.USERID), order.SourceSID.Int64)
+	if err != nil {
+		logger.Log(c).Error("error in fetching user accounts from DB", zap.Error(err), zap.String("userId", c.GetString(config.USERID)))
+		response.Error = append(response.Error, "error in fetching source account")
+		response.Description = "Unable to process transfer"
+		c.JSON(http.StatusInternalServerError, response)
+		return
+	}
+
+	//check status of order
+	if order.OrderStatus.String == constant.ORDER_FAILED || order.OrderStatus.String == constant.ORDER_COMPLETED {
+		logger.Log(c).Error("order not in pending state", zap.String("order_id", order.OrderID.String), zap.String("status", order.OrderStatus.String))
+		response.Error = append(response.Error, "order not in pending state")
+		response.Description = "Invalid transfer state"
+		c.JSON(http.StatusBadRequest, response)
+		return
+	} else if order.OrderStatus.String != constant.ORDER_INPROGRESS {
+		logger.Log(c).Error("order not in progress state", zap.String("order_id", order.OrderID.String), zap.String("status", order.OrderStatus.String))
+		response.Error = append(response.Error, "order not in progress state")
+		response.Description = "Invalid transfer state"
+		c.JSON(http.StatusBadRequest, response)
+		return
+	}
+
+	// execution reaches here is order is valid and in created state.
+	// order can either be cancelled or send to provider for processing based on action
+	switch request.Action {
+	case "cancel":
+		// update order status to cancelled
+		err := obj.DB.UpdateOrderStatus(c, order.OrderID.String, constant.ORDER_FAILED, "cancelled by user")
+		if err != nil {
+			logger.Log(c).Error("error in updating order status", zap.Error(err))
+			response.Error = append(response.Error, err.Error())
+			response.Description = "Failed to cancel transfer"
+			c.JSON(http.StatusInternalServerError, response)
+			return
+		}
+	case "confirm":
+		// call payment provider api to process the transfer
+		logger.Log(c).Info("calling payment provider api to process transfer", zap.String("order_id", order.OrderID.String), zap.Any("destination", orderDest))
+
+		payDetail := paymentprovider.PaymentDetails{}
+
+		// fill source details
+		switch userAccount.Type.String {
+		case constant.TRANSFER_TYPE_WALLET:
+			payDetail.SourceDetail.Type = paymentprovider.PayTypeWallet
+			// fill source wallet id
+			payDetail.SourceDetail.WalletID = userAccount.WalletID.String
+		case constant.TRANSFER_TYPE_UPI:
+			payDetail.SourceDetail.Type = paymentprovider.PayTypeUPI
+			// fill upi id
+			payDetail.SourceDetail.UPIID = userAccount.UpiID.String
+		case constant.TRANSFER_TYPE_BANK:
+			payDetail.SourceDetail.Type = paymentprovider.PayTypeNetBanking
+			// fill account and swift code
+			payDetail.SourceDetail.AccountNumber = userAccount.AccountNumber.String
+			payDetail.SourceDetail.SwiftCode = userAccount.Ifsc.String
+		default:
+			payDetail.SourceDetail.Type = paymentprovider.PayTypeCash
+		}
+
+		// fill destination details
+		switch orderDest.DestinationType.String {
+		case constant.TRANSFER_TYPE_WALLET:
+			payDetail.DestinationDetail.Type = paymentprovider.PayTypeWallet
+			// fill source wallet id
+			payDetail.DestinationDetail.WalletID = orderDest.WalletID.String
+		case constant.TRANSFER_TYPE_UPI:
+			payDetail.DestinationDetail.Type = paymentprovider.PayTypeUPI
+			// fill upi id
+			payDetail.DestinationDetail.UPIID = orderDest.UPIID.String
+		case constant.TRANSFER_TYPE_BANK:
+			payDetail.DestinationDetail.Type = paymentprovider.PayTypeNetBanking
+			// fill account and swift code
+			payDetail.DestinationDetail.AccountNumber = orderDest.BankAccountNumber.String
+			payDetail.DestinationDetail.SwiftCode = orderDest.IFSCCode.String
+		default:
+			payDetail.DestinationDetail.Type = paymentprovider.PayTypeCash
+		}
+
+		transferId, provider, err := paymentprovider.InitiateTransfer(c, order.DestinationAmount.Float64, order.DestinationCurrency.String, payDetail)
+		if err != nil {
+			logger.Log(c).Error("error initiating transfer", zap.Error(err))
+			response.Error = append(response.Error, err.Error())
+			response.Description = "Failed to initiate transfer"
+			c.JSON(http.StatusInternalServerError, response)
+			return
+		}
+
+		// update db with provider transfer id and update order status to inprogress
+		err = obj.DB.UpdateOrderStatus(c, order.OrderID.String, constant.ORDER_INPROGRESS, "transfer initiated with provider: "+transferId)
+		if err != nil {
+			logger.Log(c).Error("error in updating order status", zap.Error(err))
+			response.Error = append(response.Error, err.Error())
+			response.Description = "Failed to process transfer"
+			c.JSON(http.StatusInternalServerError, response)
+			return
+		}
+
+		logger.Log(c).Info("transfer initiated successfully", zap.String("order_id", order.OrderID.String), zap.String("provider_transfer_id", transferId), zap.Any("provider", provider))
+
+		// update the transaction table with provider details - TODO
+
+	default:
+		logger.Log(c).Error("invalid action", zap.String("action", request.Action))
+		response.Error = append(response.Error, "invalid action")
+		response.Description = "Invalid request"
+		c.JSON(http.StatusBadRequest, response)
+		return
+	}
+
+	response.Status = true
+	if request.Action == "confirm" {
+		response.Description = "Transfer confirmed"
+	} else {
+		response.Description = "Transfer cancelled"
+	}
+	response.Data = &dto.TransferConfirm{
+		TransferID: request.TransferID,
+		Status:     response.Description,
+	}
+
+	c.JSON(http.StatusOK, response)
 }

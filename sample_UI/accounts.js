@@ -29,11 +29,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     accounts.forEach(acc => {
       const el = document.createElement('div')
       el.className = 'account animate'
-      const accId = acc.account_number || acc.wallet_id || acc.upi_id || acc.id || 'unknown'
+      const accId = acc.account_number || acc.wallet_id || acc.upi_id || acc.id || `sid:${acc.sid}`
       el.innerHTML = `<div style="display:flex;justify-content:space-between"><div><strong>${accId}</strong><div class="muted">${acc.account_type || acc.bank_name || ''}</div></div><div>${acc.available_balance || acc.balance || ''}</div></div>`
       el.addEventListener('click', () => {
-        // dispatch custom event to open transfer modal
-        const ev = new CustomEvent('openTransferModal', { detail: { accountId: accId } })
+        // dispatch custom event to open transfer modal and include the full account object
+        const ev = new CustomEvent('openTransferModal', { detail: { account: acc } })
         document.dispatchEvent(ev)
       })
       list.appendChild(el)

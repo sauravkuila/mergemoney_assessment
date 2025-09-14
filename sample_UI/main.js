@@ -17,8 +17,10 @@ document.addEventListener('DOMContentLoaded', () => {
         msg.textContent = (data.description || 'Failed to generate OTP');
         return
       }
-      // show the OTPRequestId and OTP for demo environments
-      msg.innerHTML = `OTP generated. Request ID: <code>${data.data.otp_request_id}</code><br/>OTP (demo): <strong>${data.data.otp}</strong><br/><a href="verify.html">Go verify</a>`;
+  // show the OTPRequestId and OTP for demo environments and link to verify page with params
+  const reqid = encodeURIComponent(data.data.otp_request_id || '');
+  const otp = encodeURIComponent(data.data.otp || '');
+  msg.innerHTML = `OTP generated. Request ID: <code>${data.data.otp_request_id}</code><br/>OTP (demo): <strong>${data.data.otp}</strong><br/><a href="verify.html?mobile=${encodeURIComponent(mobile)}&country=${encodeURIComponent(country)}&otp=${otp}&reqid=${reqid}">Go verify</a>`;
     } catch (err) {
       msg.textContent = 'Network error';
     }

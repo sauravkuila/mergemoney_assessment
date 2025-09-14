@@ -2,6 +2,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('verify-form');
   const msg = document.getElementById('msg');
 
+  // Prefill from query params or seed defaults for demo
+  const params = new URLSearchParams(window.location.search);
+  const defaultCountry = params.get('country') || '+91';
+  const defaultMobile = params.get('mobile') || '9999999999';
+  const defaultOTP = params.get('otp') || '123456';
+  const defaultReq = params.get('reqid') || 'req_123456789';
+  document.getElementById('country').value = defaultCountry;
+  document.getElementById('mobile').value = defaultMobile;
+  document.getElementById('otp').value = defaultOTP;
+  document.getElementById('reqid').value = defaultReq;
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     msg.textContent = '';

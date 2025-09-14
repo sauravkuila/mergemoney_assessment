@@ -52,6 +52,7 @@ func (p *restyClient) InvokeRequest(c context.Context, method string, url string
 			SetRetryWaitTime(time.Duration(time.Duration(p.retryWaitTime)) * time.Millisecond).
 			// Default (nil) implies exponential backoff with jitter
 			SetRetryAfter(nil).
+			SetDebug(true).
 			R()
 	}
 

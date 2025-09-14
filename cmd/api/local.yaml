@@ -27,3 +27,5 @@ external:
   account_aggregator:
     url: "https://api.accountaggregator.com"
     key: "account_aggregator_key"
+  fx_rate_vendor:
+    url: "https://fxds-public-exchange-rates-api.oanda.com"

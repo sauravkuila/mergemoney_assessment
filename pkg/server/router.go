@@ -51,6 +51,13 @@ func getRouter(serviceObj service.ServiceItf) *gin.Engine {
 	//health check
 	router.GET("/health", serviceObj.Health)
 
+	// serve sample UI pages (static) -- use parent path because the server runs from cmd/api
+	router.Static("/ui", "../../sample_UI")
+	// root -> UI index
+	router.GET("/", func(c *gin.Context) {
+		c.Redirect(http.StatusFound, "/ui/index.html")
+	})
+
 	loginGroup := router.Group("/v1")
 	{
 		loginGroup.GET("/generateOTP", serviceObj.GetV1Object().GenerateOTP)
@@ -70,6 +77,11 @@ func getRouter(serviceObj service.ServiceItf) *gin.Engine {
 		{
 			twoFAGroup.Use(middleware.TwoFAMiddleware())
 			twoFAGroup.POST("/2fa/refresh", serviceObj.GetV1Object().Refresh2FA)
+			transferGroup := twoFAGroup.Group("transfer")
+			{
+				transferGroup.POST("", serviceObj.GetV1Object().Transfer)
+				transferGroup.POST("/confirm", serviceObj.GetV1Object().TransferConfirm)
+			}
 		}
 	}
 

@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sauravkuila/mergemoney_assessment/pkg/config"
@@ -25,6 +26,14 @@ func OneFAMiddleware() gin.HandlerFunc {
 		if accessTokenString == "" {
 			logger.Log().Error("auth token incorrect")
 			c.JSON(http.StatusUnauthorized, response)
+			c.Abort()
+			return
+		}
+
+		if parts := strings.Split(accessTokenString, "."); len(parts) != 3 {
+			logger.Log().Error("invalid auth token format")
+			response.Message = "Invalid auth token format"
+			c.JSON(http.StatusBadRequest, response)
 			c.Abort()
 			return
 		}
@@ -80,6 +89,15 @@ func TwoFAMiddleware() gin.HandlerFunc {
 		if accessTokenString == "" {
 			logger.Log().Error("auth token incorrect")
 			c.JSON(http.StatusUnauthorized, response)
+			c.Abort()
+			return
+		}
+
+		// Basic JWT format validation: should have 3 parts separated by '.'
+		if parts := strings.Split(accessTokenString, "."); len(parts) != 3 {
+			logger.Log().Error("invalid auth token format")
+			response.Message = "Invalid auth token format"
+			c.JSON(http.StatusBadRequest, response)
 			c.Abort()
 			return
 		}

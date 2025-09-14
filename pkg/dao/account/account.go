@@ -14,11 +14,8 @@ type DbAccountItf interface {
 	// save user account
 	SaveUserAccounts(ctx context.Context, userId string, account []dto.UserAccount) ([]dto.DBUserAccount, error)
 
-	// Save the transfer
-	SaveTransfer(ctx context.Context, transfer dto.DBTransfer) error
-
-	// GetTransferByID(ctx context.Context, transferID string) (*dto.DBTransfer, error)
-	// UpdateTransferStatus(ctx context.Context, transferID string, status string, errMsg string) error
+	// Save the order
+	SaveOrder(ctx context.Context, order dto.DBOrder, orderDestination dto.DBOrderDestination) error
 }
 
 type accountSt struct {

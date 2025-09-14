@@ -26,15 +26,15 @@ This project implements a robust, secure, and scalable cross-border money transf
 
 ### Authentication modes (SFA vs MFA)
 
-This project supports two levels of authentication:
+This project supports two levels of authentication, used together to balance friction and security:
 
 - Single-Factor Authentication (SFA / 1FA):
 	- Used for lower-risk read-only operations such as fetching user details and listing accounts for a user.
-	- In the router these endpoints are protected by the OneFAMiddleware (1FA) which represents SFA flows in this codebase.
+	- Protected by `middleware.OneFAMiddleware()` in the router.
 
 - Multi-Factor Authentication (MFA / 2FA):
-	- Required for higher-risk operations such as performing account transactions or any action that changes account state.
-	- In the router these endpoints are protected by the TwoFAMiddleware (2FA).
+	- Required for higher-risk operations such as finalizing transfers, payouts, or any action that changes account state.
+	- Protected by `middleware.TwoFAMiddleware()` in the router.
 
 Routing summary (from `pkg/server/router.go`)
 
@@ -49,9 +49,12 @@ Routing summary (from `pkg/server/router.go`)
 	- POST /v1/1fa/refresh     -> Refresh 1FA (SFA) session
 	- POST /v1/verifyMPIN      -> Verify MPIN (SFA)
 	- GET  /v1/accounts        -> Get accounts for a mobile number (read-only)
+	- (read-only) GET /v1/accounts        -> Get accounts for a mobile number (read-only)
 
 - MFA (2FA) protected endpoints (TwoFAMiddleware):
 	- POST /v1/2fa/refresh     -> Refresh 2FA (MFA) session
+	- POST /v1/transfer        -> Initiate a transfer (creates pending transfer) — requires 2FA to initiate
+	- POST /v1/transfer/confirm -> Confirm or cancel a pending transfer (finalize): requires 2FA
 
 Notes on security rules (intended behavior):
 - User detail and user account detail (the endpoints used to fetch accounts) can be fetched using SFA (1FA). This is intentionally lower friction for listing and selection flows.
@@ -84,23 +87,109 @@ Notes on security rules (intended behavior):
 ```
 mergemoney_assessment/
 ├── cmd/
-│   └── api/                # API entrypoint and local config (cmd/api/main.go, local.yaml)
-├── external/               # External integrations & aggregator
-│   └── accountaggregator/  # Connector to external account aggregator
-├── pkg/                    # Primary application code
-│   ├── config/             # Configuration management
-│   ├── constant/           # Constants and enums
-│   ├── dao/                # Data access objects
-│   │   ├── account/        # Account-related DB operations
-│   │   └── user/           # User-related DB operations
-│   ├── database/           # DB models and Postgres connection
-│   ├── dto/                # Data transfer objects
-│   ├── logger/             # Logging utilities (gorm logger, zap wrapper)
-│   ├── middleware/         # Middleware (auth, mfa, mfa handlers)
-│   ├── server/             # Server/router setup (router.go)
-│   ├── service/            # Business logic and v1 services
-│   │   └── v1/             # Versioned APIs (login, account, etc.)
-│   └── utils/              # Utility functions (identifier, redis client, rest client)
+│   └── api/
+│       ├── local.yaml
+│       └── main.go
+├── external/
+│   ├── external.go
+│   ├── accountaggregator/
+│   │   ├── accountaggregator.go
+│   │   ├── connect.go
+│   │   └── models.go
+│   ├── fxratemanager/
+│   │   ├── connect.go
+│   │   ├── fxratemanager.go
+│   │   └── models.go
+│   └── paymentprovider/
+│       ├── initiate.go
+│       ├── paymentprovider.go
+│       └── models.go
+├── pkg/
+│   ├── config/
+│   │   ├── config.go
+│   │   └── constant.go
+│   ├── constant/
+│   │   ├── auth.go
+│   │   ├── constant.go
+│   │   └── transfer.go
+│   ├── dao/
+│   │   ├── dao.go
+│   │   ├── account/
+│   │   │   ├── account.go
+│   │   │   ├── info.go
+│   │   │   ├── order.go
+│   │   │   └── transaction.go
+│   │   └── user/
+│   │       ├── info.go
+│   │       ├── profile.go
+│   │       └── user.go
+│   ├── database/
+│   │   ├── constant.go
+│   │   ├── create.sql
+│   │   ├── model.go
+│   │   └── postgres.go
+│   ├── dto/
+│   │   ├── account.go
+│   │   ├── auth.go
+│   │   ├── common.go
+│   │   ├── login.go
+│   │   ├── order.go
+│   │   ├── transfer.go
+│   │   └── user.go
+│   ├── logger/
+│   │   ├── gormlogger.go
+│   │   └── logger.go
+│   ├── middleware/
+│   │   ├── auth.go
+│   │   └── mfa.go
+│   ├── server/
+│   │   ├── router.go
+│   │   └── server.go
+│   ├── service/
+│   │   ├── health.go
+│   │   ├── service.go
+│   │   └── v1/
+│   │       ├── v1.go
+│   │       ├── account/
+│   │       │   ├── account.go
+│   │       │   ├── info.go
+│   │       │   └── transfer.go
+│   │       ├── login/
+│   │       │   ├── login.go
+│   │       │   ├── mpin.go
+│   │       │   ├── otp.go
+│   │       │   └── verify.go
+│   │       └── webhook/
+│   │           ├── provider1.go
+│   │           ├── provider2.go
+│   │           └── webhook.go
+│   └── utils/
+│       ├── models.go
+│       ├── utils.go
+│       ├── identifier/
+│       │   ├── base62.go
+│       │   ├── constant.go
+│       │   ├── identifier.go
+│       │   └── snowflake.go
+│       ├── redisclient/
+│       │   ├── conn.go
+│       │   ├── redisclient.go
+│       │   └── redisgo.go
+│       └── restclient/
+│           ├── restclient.go
+│           └── resty.go
+├── sample_UI/
+│   ├── accounts.html
+│   ├── accounts.js
+│   ├── api.js
+│   ├── home.html
+│   ├── home.js
+│   ├── index.html
+│   ├── main.js
+│   ├── styles.css
+│   ├── transfer.js
+│   ├── verify.html
+│   └── verify.js
 └── README.md
 ```
 
@@ -197,3 +286,57 @@ docker builder prune -af
 ```
 
 - The containerized app uses a small wait-for-db wrapper so the server starts only after Postgres is reachable. The app accepts DB env vars `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` which are set in `docker-compose.yml`.
+
+Notable recent changes
+----------------------
+
+The codebase has received recent additions related to transfer handling, persistence, and UI flows. Below is a concise list of changes and how to exercise them locally for manual verification.
+
+- New API endpoints
+	- POST /v1/transfer (protected by OneFAMiddleware / 1FA)
+		- Accepts a JSON payload matching `pkg/dto.TransferRequest`:
+			{
+				"source": { "sid": <int>, "currency": "<CUR>", "amount": <number> },
+				"destination": { "currency": "<CUR>", "recipient_detail": {...}, "account": "...", "upi": "...", "wallet_id": "...", "type": "bank|wallet|cash" },
+				"idempotency_key": "optional-string"
+			}
+		- Creates a transfer record with status `pending` and returns `transfer_id` and the idempotency key. If an identical `idempotency_key` exists the existing transfer is returned.
+
+	- POST /v1/transfer/confirm (protected by TwoFAMiddleware / 2FA)
+		- Accepts { transfer_id, action: "confirm"|"cancel", twofa_token? }
+		- Finalizes the pending transfer: `confirm` sets status `success`, `cancel` sets status `failed` (error message "cancelled by user").
+
+- Database
+	- A new `transfers` table has been added in `pkg/database/create.sql` with the following notable columns: `transfer_id` (PK), `idempotency_key` (unique), `user_id`, `source_sid`, `source_currency`, `source_amount`, `destination_type`, `destination_payload` (JSONB), `status`, `error_message`, `created_at`, `updated_at`.
+	- Indexes on `idempotency_key` and `user_id` were added.
+	- Note: the SQL in `pkg/database/create.sql` runs only during DB initialization. To apply schema changes to an existing volume remove the DB volume and recreate the stack (see the Docker instructions above).
+
+- DAO / Service changes
+	- DAO: `pkg/dao/account` now exposes transfer-related methods: `SaveTransfer`, `GetTransferByIdempotencyKey`, `GetTransferByID`, and `UpdateTransferStatus`.
+	- Service: `pkg/service/v1/account` persists new transfers as `pending` on POST /v1/transfer and implements `TransferConfirm` to finalize/cancel a pending transfer. Idempotency is respected when a client provides `idempotency_key`.
+
+- UI / Client
+	- A simple static UI is served from `/ui` (see `sample_UI/`) with pages for OTP login, accounts listing, and a transfer modal.
+	- The transfer modal now builds payloads that match the server `TransferRequest` DTO and submits to `/v1/transfer` using the existing `fetchWithAuth` helper (which supports 1FA and 2FA flows and refresh-on-401).
+	- After receiving a pending transfer response, the UI prompts the user for a 2FA code and calls POST /v1/transfer/confirm with `authType='2fa'` to complete the transfer.
+
+- Webhooks
+	- Several webhook endpoint stubs were added under `pkg/service/v1/webhook/` as placeholders for payment provider callbacks; they currently simulate provider notifications and should be extended to wire into the transaction state machine.
+
+Quick manual test (happy path)
+1. Start the stack with:
+
+```bash
+docker compose up --build
+```
+
+2. Open the sample UI at http://localhost:8080/ui/index.html and follow these steps:
+	 - Generate OTP and verify (demo OTP flows are implemented in the test UI).
+	 - On successful login you will have a 1FA session. Open Accounts and select a source account.
+	 - Fill the transfer modal and submit. The server will create a pending transfer and return `transfer_id`.
+	 - The UI will prompt for a 2FA code; enter the demo 2FA code and click Confirm. The UI calls `/v1/transfer/confirm` with `authType='2fa'` and shows success/failure feedback.
+
+Notes & next steps
+- The current transfer confirm handler simulates execution and sets the status to `success` or `failed`. For production, wire to real payment rails and handle asynchronous provider callbacks via webhooks.
+- Consider adding a `GET /v1/transfers` endpoint and a Transfers UI to list a user's transfers and statuses (recommended next step).
+- Consider adding a migration tool (go-migrate, goose, flyway) for safer schema updates rather than re-running `create.sql`.

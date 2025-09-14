@@ -35,6 +35,7 @@ func Load(env string, configPaths ...string) {
 	}
 
 	if env == CONFIG_SERVER {
+		// existing behavior: server.yaml requires env vars for keys
 		for _, v := range config.AllKeys() {
 			if strings.ToLower(v) == "version" {
 				continue // skipping first line
@@ -57,6 +58,24 @@ func Load(env string, configPaths ...string) {
 		}
 		log.Println("application running with server.yaml")
 	} else {
+		// For non-server (local/dev) loads, prefer common DB_* env vars when present so
+		// docker-compose can pass DB_HOST=db etc. But fall back to YAML values if env not set.
+		// This block does not require all env variables to be present.
+		if ev := os.Getenv("DB_HOST"); ev != "" {
+			config.Set("databases.postgres.host", ev)
+		}
+		if ev := os.Getenv("DB_PORT"); ev != "" {
+			config.Set("databases.postgres.port", ev)
+		}
+		if ev := os.Getenv("DB_USER"); ev != "" {
+			config.Set("databases.postgres.user", ev)
+		}
+		if ev := os.Getenv("DB_PASSWORD"); ev != "" {
+			config.Set("databases.postgres.password", ev)
+		}
+		if ev := os.Getenv("DB_NAME"); ev != "" {
+			config.Set("databases.postgres.db", ev)
+		}
 		log.Println("application running with ", env, ".yaml")
 	}
 }

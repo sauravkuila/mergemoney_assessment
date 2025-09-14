@@ -10,6 +10,7 @@ type AggregatorRequest struct {
 }
 
 type UserAccount struct {
+	Sid           int64     `json:"sid,omitempty"`
 	Type          string    `json:"type"`
 	BankName      string    `json:"bank_name,omitempty"`
 	AccountNumber string    `json:"account_number,omitempty"`
@@ -45,6 +46,7 @@ type DBUserAccount struct {
 
 func (obj *DBUserAccount) ToAggregatorAccount() UserAccount {
 	return UserAccount{
+		Sid:           obj.Sid.Int64,
 		Type:          obj.Type.String,
 		BankName:      obj.BankName.String,
 		AccountNumber: obj.AccountNumber.String,

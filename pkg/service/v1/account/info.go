@@ -57,14 +57,23 @@ func (obj *accountSt) GetAccounts(c *gin.Context) {
 	}
 
 	// save accounts to DB for future reference if needed
-	if err := obj.DB.SaveUserAccounts(c, userId, data); err != nil {
+	if dbSavedAccounts, err := obj.DB.SaveUserAccounts(c, userId, data); err != nil {
 		logger.Log(c).Error("error in saving accounts to DB", zap.Error(err))
-		// continue even if saving to DB fails
+		response.Error = append(response.Error, fmt.Sprintf("error in saving accounts to DB: %v", err))
+		response.Description = "Failed to save accounts"
+		c.JSON(http.StatusInternalServerError, response)
+		return
+	} else {
+		response.Data = make([]dto.UserAccount, 0)
+		sids := make([]int64, 0)
+		for _, acc := range dbSavedAccounts {
+			data := acc.ToAggregatorAccount()
+			response.Data = append(response.Data, data)
+			sids = append(sids, acc.Sid.Int64)
+		}
+		logger.Log(c).Info("saved user accounts to DB", zap.String("mobile", mobile), zap.Int64s("serial_ids", sids))
 	}
 
-	// return accounts
-	response.Data = make([]dto.UserAccount, 0)
-	response.Data = append(response.Data, data...)
 	response.Status = true
 	response.Description = "Accounts fetched successfully"
 

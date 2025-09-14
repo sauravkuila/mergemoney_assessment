@@ -51,6 +51,20 @@ func getRouter(serviceObj service.ServiceItf) *gin.Engine {
 	//health check
 	router.GET("/health", serviceObj.Health)
 
+	//webhook endpoints - no auth. assuming ip is whitelisted at infra level
+	webhookGroup := router.Group("/webhook")
+	{
+		webhookGroup.POST("/provider1/transfer", serviceObj.GetV1Object().ReconcileTransferFromProvider1)
+		webhookGroup.POST("/provider2/transfer", serviceObj.GetV1Object().ReconcileTransferFromProvider2)
+	}
+
+	// serve sample UI pages (static) -- use parent path because the server runs from cmd/api
+	router.Static("/ui", "../../sample_UI")
+	// root -> UI index
+	router.GET("/", func(c *gin.Context) {
+		c.Redirect(http.StatusFound, "/ui/index.html")
+	})
+
 	loginGroup := router.Group("/v1")
 	{
 		loginGroup.GET("/generateOTP", serviceObj.GetV1Object().GenerateOTP)
@@ -70,6 +84,14 @@ func getRouter(serviceObj service.ServiceItf) *gin.Engine {
 		{
 			twoFAGroup.Use(middleware.TwoFAMiddleware())
 			twoFAGroup.POST("/2fa/refresh", serviceObj.GetV1Object().Refresh2FA)
+			transferGroup := twoFAGroup.Group("transfer")
+			{
+				transferGroup.POST("", serviceObj.GetV1Object().Transfer)
+				transferGroup.POST("/confirm", serviceObj.GetV1Object().TransferConfirm)
+				transferGroup.GET("/:transfer_id", serviceObj.GetV1Object().TransferStatus)
+			}
+
+			//TODO: configure notification endpoints. polling API already exists for transfer status
 		}
 	}
 

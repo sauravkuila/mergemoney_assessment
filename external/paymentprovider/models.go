@@ -24,3 +24,14 @@ type PaymentInfo struct {
 	Cash          string
 	Name          string
 }
+
+type Provider1WebhookUpdate struct {
+	PaymentID string `json:"payment_id"`
+	Status    string `json:"status"` // success | failed
+}
+
+type Provider2WebhookUpdate struct {
+	IdcKey  string `json:"idc_key_id"`
+	Status  string `json:"status"` // success | failed
+	Remarks string `json:"remarks"`
+}

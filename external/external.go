@@ -13,3 +13,5 @@ func InitExternal() {
 	fxratemanager.InitFxRateVendor()
 	paymentprovider.InitPaymentProvider()
 }
+
+//TODO: build a factory and an interface to dynamically match for providers

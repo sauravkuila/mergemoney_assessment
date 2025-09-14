@@ -3,6 +3,7 @@ package external
 import (
 	"github.com/sauravkuila/mergemoney_assessment/external/accountaggregator"
 	"github.com/sauravkuila/mergemoney_assessment/external/fxratemanager"
+	"github.com/sauravkuila/mergemoney_assessment/external/paymentprovider"
 )
 
 func InitExternal() {
@@ -10,4 +11,5 @@ func InitExternal() {
 	// This can include setting up any necessary configurations or connections
 	accountaggregator.InitAccountAggregator()
 	fxratemanager.InitFxRateVendor()
+	paymentprovider.InitPaymentProvider()
 }

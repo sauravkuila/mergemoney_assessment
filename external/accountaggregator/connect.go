@@ -18,7 +18,7 @@ func GetAccountsAgainstMobile(c *gin.Context, mobile string, util utils.UtilsItf
 	// Mock response
 	accountData = []dto.UserAccount{
 		{
-			Type:          "bank_account",
+			Type:          "bank",
 			BankName:      "HDFC Bank",
 			AccountNumber: "XXXXXX1234",
 			Ifsc:          "HDFC0001234",

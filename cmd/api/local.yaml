@@ -29,3 +29,10 @@ external:
     key: "account_aggregator_key"
   fx_rate_vendor:
     url: "https://fxds-public-exchange-rates-api.oanda.com"
+  paymentprovider:
+    provider_1:
+      url: "https://api.paymentprovider.com"
+      key: "payment_provider_key"
+    provider_2:
+      url: "https://api.paymentprovider.com"
+      key: "payment_provider_key"

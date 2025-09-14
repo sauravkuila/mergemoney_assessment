@@ -41,7 +41,7 @@ type DBTransaction struct {
 	ProviderResponse json.RawMessage `gorm:"column:provider_response;type:jsonb"`
 	Status           sql.NullString  `gorm:"column:status;index"`          // initiated → pending → inprogress → completed/failed
 	ErrorMessage     sql.NullString  `gorm:"column:error_message"`         // error message if any
-	RetryCount       int             `gorm:"column:retry_count;default:0"` // number of retries attempted
+	RetryCount       sql.NullInt64   `gorm:"column:retry_count;default:0"` // number of retries attempted
 	LastRetryAt      sql.NullTime    `gorm:"column:last_retry_at"`         // timestamp of last retry
 	CreatedAt        sql.NullTime    `gorm:"column:created_at"`
 	UpdatedAt        sql.NullTime    `gorm:"column:updated_at"`

@@ -272,7 +272,7 @@ func (obj *accountSt) TransferConfirm(c *gin.Context) {
 			payDetail.DestinationDetail.Type = paymentprovider.PayTypeCash
 		}
 
-		transferId, provider, err := paymentprovider.InitiateTransfer(c, order.DestinationAmount.Float64, order.DestinationCurrency.String, payDetail)
+		transferId, provider, providerRequest, providerResponse, err := paymentprovider.InitiateTransfer(c, order.DestinationAmount.Float64, order.DestinationCurrency.String, payDetail, obj.utilsObj)
 		if err != nil {
 			logger.Log(c).Error("error initiating transfer", zap.Error(err))
 			response.Error = append(response.Error, err.Error())
@@ -293,7 +293,26 @@ func (obj *accountSt) TransferConfirm(c *gin.Context) {
 
 		logger.Log(c).Info("transfer initiated successfully", zap.String("order_id", order.OrderID.String), zap.String("provider_transfer_id", transferId), zap.Any("provider", provider))
 
-		// update the transaction table with provider details - TODO
+		// update the transaction table with provider details
+		txn := dto.DBTransaction{
+			TransactionID:    sql.NullString{String: obj.utilsObj.GetUniqueId("txn"), Valid: true},
+			OrderID:          sql.NullString{String: request.TransferID, Valid: true},
+			Provider:         sql.NullString{String: provider, Valid: true},
+			ProviderID:       sql.NullString{String: transferId, Valid: true},
+			ProviderRequest:  providerRequest,
+			ProviderResponse: providerResponse,
+			Status:           sql.NullString{String: constant.TXN_INITIATED, Valid: true},
+			ErrorMessage:     sql.NullString{String: "", Valid: false},
+			RetryCount:       sql.NullInt64{Int64: 0, Valid: true},
+			LastRetryAt:      sql.NullTime{Time: time.Time{}, Valid: true},
+		}
+		if err := obj.DB.SaveTransaction(c, txn); err != nil {
+			logger.Log(c).Error("error in saving transaction to DB", zap.Error(err))
+			response.Error = append(response.Error, err.Error())
+			response.Description = "Failed to process transfer"
+			c.JSON(http.StatusInternalServerError, response)
+			return
+		}
 
 	default:
 		logger.Log(c).Error("invalid action", zap.String("action", request.Action))
@@ -312,6 +331,42 @@ func (obj *accountSt) TransferConfirm(c *gin.Context) {
 	response.Data = &dto.TransferConfirm{
 		TransferID: request.TransferID,
 		Status:     response.Description,
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+func (obj *accountSt) TransferStatus(c *gin.Context) {
+	var (
+		request  dto.TransferStatusRequest
+		response dto.TransferStatusResponse
+	)
+
+	if err := c.BindUri(&request); err != nil {
+		logger.Log(c).Error("error in binding transfer status request", zap.Error(err))
+		response.Error = append(response.Error, err.Error())
+		response.Description = "Invalid request"
+		c.JSON(http.StatusBadRequest, response)
+		return
+	}
+
+	logger.Log(c).Info("transfer status request", zap.Any("request", request))
+
+	// fetch the order from DB and check if it belongs to user
+	order, _, err := obj.DB.GetOrderById(c, request.TransferID, c.GetString(config.USERID))
+	if err != nil {
+		logger.Log(c).Error("error in fetching order from DB", zap.Error(err))
+		response.Error = append(response.Error, err.Error())
+		response.Description = "Invalid transfer ID"
+		c.JSON(http.StatusBadRequest, response)
+		return
+	}
+
+	response.Status = true
+	response.Description = "Transfer status fetched"
+	response.Data = &dto.TransferStatus{
+		TransferID: order.OrderID.String,
+		Status:     order.OrderStatus.String,
 	}
 
 	c.JSON(http.StatusOK, response)

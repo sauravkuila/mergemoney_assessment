@@ -58,3 +58,17 @@ type TransferConfirm struct {
 	TransferID string `json:"transfer_id"`
 	Status     string `json:"status"`
 }
+
+type TransferStatusRequest struct {
+	TransferID string `uri:"transfer_id" binding:"required"`
+}
+
+type TransferStatusResponse struct {
+	Data *TransferStatus `json:"data,omitempty"`
+	CommonResponse
+}
+
+type TransferStatus struct {
+	TransferID string `json:"transfer_id"`
+	Status     string `json:"status"`
+}

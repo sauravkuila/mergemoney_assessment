@@ -2,6 +2,7 @@ package paymentprovider
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
 	"github.com/sauravkuila/mergemoney_assessment/pkg/config"
@@ -11,7 +12,7 @@ import (
 )
 
 // returns transfer ID, provider used and error if any
-func InitiateTransfer(ctx context.Context, amount float64, currency string, payDetail PaymentDetails, utilObj utils.UtilsItf) (string, string, error) {
+func InitiateTransfer(ctx context.Context, amount float64, currency string, payDetail PaymentDetails, utilObj utils.UtilsItf) (string, string, json.RawMessage, json.RawMessage, error) {
 	// Logic to choose a provider and initiate the transfer
 	// fetch a provider preference from config
 	provider := config.GetConfig().GetString("external.paymentprovider.preferred_provider")
@@ -20,7 +21,7 @@ func InitiateTransfer(ctx context.Context, amount float64, currency string, payD
 	}
 	providerConfig, exists := providerConfigMap[provider]
 	if !exists {
-		return "", "", errors.New("invalid payment provider") // or return an error indicating invalid provider
+		return "", "", nil, nil, errors.New("invalid payment provider") // or return an error indicating invalid provider
 	}
 	logger.Log().Info("Initiating transfer", zap.String("provider", provider), zap.Float64("amount", amount), zap.String("currency", currency), zap.Any("payment_details", payDetail), zap.Any("provider_config", providerConfig))
 
@@ -34,5 +35,15 @@ func InitiateTransfer(ctx context.Context, amount float64, currency string, payD
 
 	// For simplicity, we will just return a dummy transfer ID
 	providerUniqueId := utilObj.GetUniqueId(provider) // this is provider specific idempotency key
-	return providerUniqueId, provider, nil
+	sampleproviderRequest, _ := json.Marshal(map[string]interface{}{
+		"amount":        amount,
+		"currency":      currency,
+		"paymentDetail": payDetail,
+	})
+	sampleproviderResponse, _ := json.Marshal(map[string]interface{}{
+		"status":      "success",
+		"transfer_id": providerUniqueId,
+	})
+	logger.Log().Info("Transfer initiated with provider", zap.String("provider", provider), zap.String("provider_transfer_id", providerUniqueId), zap.Any("provider_request", string(sampleproviderRequest)), zap.Any("provider_response", string(sampleproviderResponse)))
+	return providerUniqueId, provider, sampleproviderRequest, sampleproviderResponse, nil
 }

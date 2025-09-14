@@ -18,8 +18,8 @@ func GetFxRate(ctx context.Context, sourceCurrency, destinationCurrency string, 
 	var dataObj RateResponse
 
 	// prepare query params
-	startDate := time.Now().AddDate(0, 0, -1).Format("2006-01-02") // yesterday
-	endDate := time.Now().Format("2006-01-02")
+	startDate := time.Now().AddDate(0, 0, -2).Format("2006-01-02") // two days ago
+	endDate := time.Now().AddDate(0, 0, -2).Format("2006-01-02")
 	rateDate := time.Now()
 	queryParams := map[string]string{
 		"base":       sourceCurrency,
@@ -35,14 +35,22 @@ func GetFxRate(ctx context.Context, sourceCurrency, destinationCurrency string, 
 	}
 
 	headers := map[string]string{
-		"Host":               host,
-		"sec-ch-ua-platform": `"macOS"`,
-		"Referer":            "https://www.oanda.com/",
-		"User-Agent":         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
-		"Accept":             "application/json, text/plain, */*",
-		"sec-ch-ua":          `"Not;A=Brand";v="99", "Google Chrome";v="139", "Chromium";v="139"`,
-		"sec-ch-ua-mobile":   "?0",
+		"Host":                      host,
+		"sec-ch-ua-platform":        `"macOS"`,
+		"Referer":                   "https://www.oanda.com/",
+		"User-Agent":                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+		"Accept":                    "application/json, text/plain, */*",
+		"Accept-Language":           "en-GB,en;q=0.9",
+		"Priority":                  "u=0, i",
+		"sec-ch-ua":                 `"Not;A=Brand";v="99", "Google Chrome";v="139", "Chromium";v="139"`,
+		"sec-ch-ua-mobile":          "?0",
+		"sec-fetch-dest":            "document",
+		"sec-fetch-mode":            "navigate",
+		"sec-fetch-site":            "none",
+		"RefererPolicy":             "strict-origin-when-cross-origin",
+		"upgrade-insecure-requests": "1",
 	}
+
 	// Make the GET request to fetch the FX rate
 	data, code, err := utilObj.InvokeRequest(ctx, http.MethodGet, FX_RATE_VENDOR_BASE_URL+"/cc-api/currencies", nil, headers, nil, queryParams, nil, nil)
 	if err != nil || code != http.StatusOK {

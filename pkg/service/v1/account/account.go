@@ -14,6 +14,8 @@ type AccountItf interface {
 	Transfer(c *gin.Context)
 	// confirm or cancel a pending transfer
 	TransferConfirm(c *gin.Context)
+	// get transfer status
+	TransferStatus(c *gin.Context)
 }
 
 type accountSt struct {

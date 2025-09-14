@@ -16,7 +16,7 @@ type DBOrder struct {
 	ConversionRate      sql.NullFloat64 `gorm:"column:conversion_rate"`
 	ConversionRateDate  sql.NullTime    `gorm:"column:conversion_rate_date"`
 	OrderStatus         sql.NullString  `gorm:"column:order_status;index"`
-	Remark              sql.NullString  `gorm:"column:remark"`
+	Remark              sql.NullString  `gorm:"column:remarks"`
 	CreatedAt           sql.NullTime    `gorm:"column:created_at"`
 	UpdatedAt           sql.NullTime    `gorm:"column:updated_at"`
 }

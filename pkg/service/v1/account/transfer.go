@@ -207,15 +207,9 @@ func (obj *accountSt) TransferConfirm(c *gin.Context) {
 	}
 
 	//check status of order
-	if order.OrderStatus.String == constant.ORDER_FAILED || order.OrderStatus.String == constant.ORDER_COMPLETED {
-		logger.Log(c).Error("order not in pending state", zap.String("order_id", order.OrderID.String), zap.String("status", order.OrderStatus.String))
-		response.Error = append(response.Error, "order not in pending state")
-		response.Description = "Invalid transfer state"
-		c.JSON(http.StatusBadRequest, response)
-		return
-	} else if order.OrderStatus.String != constant.ORDER_INPROGRESS {
-		logger.Log(c).Error("order not in progress state", zap.String("order_id", order.OrderID.String), zap.String("status", order.OrderStatus.String))
-		response.Error = append(response.Error, "order not in progress state")
+	if order.OrderStatus.String != constant.ORDER_CREATED {
+		logger.Log(c).Error("order not in created state", zap.String("order_id", order.OrderID.String), zap.String("status", order.OrderStatus.String))
+		response.Error = append(response.Error, "order not in created state")
 		response.Description = "Invalid transfer state"
 		c.JSON(http.StatusBadRequest, response)
 		return

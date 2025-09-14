@@ -6,11 +6,12 @@ import (
 
 	"github.com/sauravkuila/mergemoney_assessment/pkg/config"
 	"github.com/sauravkuila/mergemoney_assessment/pkg/logger"
+	"github.com/sauravkuila/mergemoney_assessment/pkg/utils"
 	"go.uber.org/zap"
 )
 
 // returns transfer ID, provider used and error if any
-func InitiateTransfer(ctx context.Context, amount float64, currency string, payDetail PaymentDetails) (string, string, error) {
+func InitiateTransfer(ctx context.Context, amount float64, currency string, payDetail PaymentDetails, utilObj utils.UtilsItf) (string, string, error) {
 	// Logic to choose a provider and initiate the transfer
 	// fetch a provider preference from config
 	provider := config.GetConfig().GetString("external.paymentprovider.preferred_provider")
@@ -32,5 +33,6 @@ func InitiateTransfer(ctx context.Context, amount float64, currency string, payD
 	// and extract the transfer ID or handle errors accordingly.
 
 	// For simplicity, we will just return a dummy transfer ID
-	return "dummy-transfer-id", provider, nil
+	providerUniqueId := utilObj.GetUniqueId(provider) // this is provider specific idempotency key
+	return providerUniqueId, provider, nil
 }

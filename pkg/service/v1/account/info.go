@@ -74,8 +74,6 @@ func (obj *accountSt) GetAccounts(c *gin.Context) {
 		logger.Log(c).Info("saved user accounts to DB", zap.String("mobile", mobile), zap.Int64s("serial_ids", sids))
 	}
 
-	// return accounts
-	// response.Data = append(response.Data, data...)
 	response.Status = true
 	response.Description = "Accounts fetched successfully"
 

@@ -11,7 +11,7 @@ func (obj *accountSt) SaveOrder(ctx context.Context, order dto.DBOrder, orderDes
 	query := `
 		INSERT INTO orders (
 			order_id, user_id, source_sid, source_currency, source_amount,
-			destination_currency, destination_amount, conversion_rate, conversion_rate_date, order_status, remark
+			destination_currency, destination_amount, conversion_rate, conversion_rate_date, order_status, remarks
 		) VALUES (
 		 	?,?,?,?,?,
 			?,?,?,?,?,?
@@ -54,7 +54,7 @@ func (obj *accountSt) SaveOrder(ctx context.Context, order dto.DBOrder, orderDes
 func (obj *accountSt) GetOrderById(ctx context.Context, orderId string, userId string) (*dto.DBOrder, *dto.DBOrderDestination, error) {
 	query := `
 		SELECT o.order_id, o.user_id, o.source_sid, o.source_currency, o.source_amount,
-			o.destination_currency, o.destination_amount, o.conversion_rate, o.conversion_rate_date, o.order_status, 
+			o.destination_currency, o.destination_amount, o.conversion_rate, o.conversion_rate_date, o.order_status, o.remarks,
 			o.created_at, o.updated_at, od.destination_type, od.wallet_id, od.upi_id, od.bank_account_number, od.ifsc_code
 		FROM orders o
 		LEFT OUTER JOIN order_destinations od ON o.order_id = od.order_id
@@ -91,7 +91,7 @@ func (obj *accountSt) GetOrderById(ctx context.Context, orderId string, userId s
 func (obj *accountSt) UpdateOrderStatus(ctx context.Context, orderId string, status string, remark string) error {
 	query := `
 		UPDATE orders
-		SET order_status = ?, remark = ?, updated_at = NOW()
+		SET order_status = ?, remarks = ?, updated_at = NOW()
 		WHERE order_id = ?;
 	`
 	result := obj.psql.WithContext(ctx).Exec(query, status, remark, orderId)

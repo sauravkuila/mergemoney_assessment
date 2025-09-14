@@ -53,6 +53,7 @@ CREATE TABLE orders (
     conversion_rate NUMERIC(18,6),
     conversion_rate_date DATE,
     order_status VARCHAR(30) DEFAULT 'created',  -- lifecycle: created → inprogress → [failed | completed]
+    remarks VARCHAR(255),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
